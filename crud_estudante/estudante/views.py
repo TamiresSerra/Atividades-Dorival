@@ -56,5 +56,8 @@ def deletar_informações(request,pk):
 def macharete(request, texto):
     import pyfiglet
     gabriel = pyfiglet.figlet_format(texto)
+    tipo = request.query_params.get('type','')
 
     return Response(gabriel, status=status.HTTP_200_OK)
+
+
