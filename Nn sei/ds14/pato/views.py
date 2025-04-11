@@ -1,9 +1,12 @@
 from django.shortcuts import render
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
 from .models import Pato
-from .serializers import PatoSerializer
+from .serializers import PatoSerializer, LoginSerializer, DonoDoPatoSerializer
 from rest_framework.pagination import PageNumberPagination
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 class PatoPaginacao(PageNumberPagination):
     page_size = 3
@@ -26,3 +29,33 @@ class PatoListCreateAPIView(ListCreateAPIView):
         if serializer.validated_data['peso'] < 0:
             raise serializers.ValidationError("O peso não pode ser negativo")
         serializer.save()
+
+class PatoDetailAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Pato.objects.all()
+    serializer_class = PatoSerializer
+    lookup_field = 'pk'
+
+    def update(self, request, *args, **kwargs):
+        idade = request.data.get('idade')
+
+        if idade is not None and int(idade) < 0:
+            return Response({'erro': 'A idade não pode ser negativa.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().update(request, *args, **kwargs)
+
+class loginView(CreateAPIView):
+    serializer_class = LoginSerializer 
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_execption=True)
+
+        usuario = serializer.validated_data['usuario']
+        usuario_serializer = DonoDoPatoSerializer(usuario)
+
+        return Response({
+            'usuario': usuario_serializer.data,
+            'refresh': serializer.validated_data['refresh'],
+            'access': serializer.validated_data['access']
+        }, status=HTTP_200_OK)
